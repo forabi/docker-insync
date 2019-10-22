@@ -15,7 +15,7 @@ User gid:    $(id -g abc)
 -------------------------------------
 "
 
-chown -R abc:abc /data/
+chown abc:abc /data/
 
 # Set HOME using sudo
 echo "Defaults always_set_home" >> /etc/sudoers.d/always_set_home
