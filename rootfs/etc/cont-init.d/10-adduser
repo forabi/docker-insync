@@ -1,0 +1,21 @@
+#!/usr/bin/with-contenv sh
+
+PUID=${PUID:-911}
+PGID=${PGID:-911}
+
+groupmod -o -g "$PGID" abc
+usermod -o -u "$PUID" abc
+
+echo "
+-------------------------------------
+GID/UID
+-------------------------------------
+User uid:    $(id -u abc)
+User gid:    $(id -g abc)
+-------------------------------------
+"
+
+chown -R abc:abc /data/
+
+# Set HOME using sudo
+echo "Defaults always_set_home" >> /etc/sudoers.d/always_set_home

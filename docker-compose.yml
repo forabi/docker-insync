@@ -1,0 +1,24 @@
+version: '3'
+
+services:
+
+  insync:
+    container_name: insync
+    build: ./
+    restart: unless-stopped
+    environment:
+      TIMEZONE: "America/Montreal"
+      PUID: 1000
+      PGID: 1000
+      INSYNC_1_USERNAME: $DRIVE_USERNAME
+      INSYNC_1_AUTH_CODE: $DRIVE_TOKEN
+      INSYNC_1_DOWNLOAD: "ms-office"
+      INSYNC_1_DISABLE_SYNC: >
+                             root:<FOLDER_ID>,
+                             root:<FOLDER_ID>,
+                             root:<FOLDER_ID>,
+      INSYNC_1_ENABLE_SYNC: >
+                            root:<FOLDER_ID>,
+                            root:<FOLDER_ID>
+    volumes:
+      - ../Drive:/data
