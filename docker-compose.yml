@@ -4,6 +4,7 @@ services:
 
   insync:
     container_name: insync
+    #image: hadim/docker-insync
     build: ./
     restart: unless-stopped
     environment:
