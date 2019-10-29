@@ -1,9 +1,9 @@
 # docker-insync
 
-[![Docker Automated build](https://img.shields.io/docker/automated/hadim/docker-insync.svg)](https://hub.docker.com/r/hadim/docker-insync 'DockerHub')
-[![Docker Build Status](https://img.shields.io/docker/build/hadim/docker-insync.svg)](https://hub.docker.com/r/hadim/docker-insync 'DockerHub')
-[![MicroBadger Size](https://img.shields.io/microbadger/image-size/hadim/docker-insync.svg)](https://hub.docker.com/r/hadim/docker-insync 'DockerHub')
+[![Docker Automated build](https://img.shields.io/docker/cloud/automated/hadim/docker-insync.svg)](https://hub.docker.com/r/hadim/docker-insync 'DockerHub')
+[![Docker Build Status](https://img.shields.io/docker/cloud/build/hadim/docker-insync.svg)](https://hub.docker.com/r/hadim/docker-insync 'DockerHub')
 [![Docker Pulls](https://img.shields.io/docker/pulls/hadim/docker-insync.svg)](https://hub.docker.com/r/hadim/docker-insync 'DockerHub')
+[![Docker Image Size](https://images.microbadger.com/badges/image/hadim/docker-insync.svg)](https://microbadger.com/images/hadim/docker-insync "MicroBadger")
 
 A Docker image to sync a Google Drive on disk using [Insync](https://www.insynchq.com/) and [`s6-overlay`](https://github.com/just-containers/s6-overlay).
 
