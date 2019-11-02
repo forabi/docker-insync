@@ -1,7 +1,5 @@
 #!/usr/bin/with-contenv bash
 
-set -e
-
 INSYNC_1_DOWNLOAD=${INSYNC_1_DOWNLOAD:-"ms-office"}
 INSYNC_2_DOWNLOAD=${INSYNC_2_DOWNLOAD:-"ms-office"}
 INSYNC_3_DOWNLOAD=${INSYNC_3_DOWNLOAD:-"ms-office"}
@@ -14,67 +12,100 @@ sudo -u abc ln -s /data/.config /home/abc/.config
 
 # Sanity checks
 if [ -z "${INSYNC_1_USERNAME}" ]; then
-    echo "ERROR: Please set your \insync_1_USERNAME variable with the Google Drive Account."
+    echo "[ERROR] Please set your INSYNC_1_USERNAME variable with the Google Drive Account."
+    echo "[ERROR] Exiting."
     exit 1
 fi
 
-if [ -z "${INSYNC_1_AUTH_CODE}" ]; then
-    echo "ERROR: No Authentication Code Provided"
-    echo "ERROR: Visit https://insynchq.com/auth and follow the steps"
-    exit 1
-fi
+# Before starting Insync we check which accounts needs to be added.
+# We can't do that once Insync is started because DB file is locked.
+declare -A ACCOUNTS_TO_ADD
+INSYNC_DB_PATH="/data/.config/Insync/dbs/config.db"
+NUM=`printenv | sort | grep '\INSYNC_.*_USERNAME' | wc -l`
+for (( i = 1; i <= $NUM; i++ )); do
+    INSYNC_USERNAME=INSYNC_${i}_USERNAME
 
-insync start
-echo 'Sleeping 10 seconds after starting insync.'
-sleep 10s
+    if test -f "$INSYNC_DB_PATH"; then
+        RESULT=$(sqlite3 $INSYNC_DB_PATH "SELECT email FROM accounts where email='${!INSYNC_USERNAME}'")
 
-# Check to see if accounts are unlinked
-if insync get_status | grep 'UNLINKED' > dev/null; then 
-    echo 'Attempting to authorize accounts.'
-    NUM=`printenv | sort | grep '\INSYNC_.*_USERNAME' | wc -l`
-    for (( i = 1; i <= $NUM; i++ ))
-    do
-        INSYNC_USERNAME=INSYNC_${i}_USERNAME
-        INSYNC_DOWNLOAD=INSYNC_${i}_DOWNLOAD
-        INSYNC_AUTH_CODE=INSYNC_${i}_AUTH_CODE
+        if [ "$RESULT" == "${!INSYNC_USERNAME}" ]; then
+            ACCOUNTS_TO_ADD["${!INSYNC_USERNAME}"]="false"
+        else
+            ACCOUNTS_TO_ADD["${!INSYNC_USERNAME}"]="true"
+        fi
+    else
+        ACCOUNTS_TO_ADD["${!INSYNC_USERNAME}"]="true"
+    fi
+done
+
+echo '[INSYNC] Start Insync.'
+insync start > /dev/null
+
+while insync get_status | grep "Insync doesn't seem to be running." > dev/null
+do
+    echo '[INSYNC] Waiting for Insync to start.'
+    sleep 2s
+done
+
+# Add accounts if they don't exist.
+NUM=`printenv | sort | grep '\INSYNC_.*_USERNAME' | wc -l`
+for (( i = 1; i <= $NUM; i++ )); do
+
+    INSYNC_USERNAME=INSYNC_${i}_USERNAME
+    INSYNC_DOWNLOAD=INSYNC_${i}_DOWNLOAD
+    INSYNC_AUTH_CODE=INSYNC_${i}_AUTH_CODE
+
+    if [ "${ACCOUNTS_TO_ADD[${!INSYNC_USERNAME}]}" == "true" ]; then
+        if [ -z "${!INSYNC_AUTH_CODE}" ]; then
+            echo "[ERROR] No Authentication Code Provided for account ${!INSYNC_USERNAME}"
+            echo "[ERROR] Visit https://insynchq.com/auth and follow the steps"
+            exit 1
+        fi
 
         sudo -u abc mkdir -p /data/${!INSYNC_USERNAME}
-        echo 'Adding account '${!INSYNC_USERNAME}
-        sudo -u abc bash -c "exec echo yes | /usr/bin/insync-headless add_account -a ${!INSYNC_AUTH_CODE} -p /data/${!INSYNC_USERNAME} -e ${!INSYNC_DOWNLOAD}"
-    done
+        echo "[INSYNC] Adding account ${!INSYNC_USERNAME}"
+        RESULT=$(sudo -u abc bash -c "exec echo yes | /usr/bin/insync-headless add_account -a ${!INSYNC_AUTH_CODE} -p /data/${!INSYNC_USERNAME} -e ${!INSYNC_DOWNLOAD}")
 
-    echo 'Sleeping 10 seconds to let Insync correctly initialize the new accounts.'
-    sleep 10s
-fi
+        if echo $RESULT | grep 'error' > dev/null; then
+            echo "[ERROR] Fails to add account for ${!INSYNC_USERNAME}"
+        fi
+    else
+        echo "[INSYNC] ${!INSYNC_USERNAME} already linked."
+    fi
+done
+
+# Wait until at least one account start syncing
+while insync get_status | grep 'UNLINKED' > dev/null
+do
+    echo '[INSYNC] Waiting for Insync to initialize.'
+    sleep 2s
+done
 
 # Do selective syncing
-
+sleep 2s
 NUM=`printenv | sort | grep '\INSYNC_.*_USERNAME' | wc -l`
-for (( i = 1; i <= $NUM; i++ ))
-do
+for (( i = 1; i <= $NUM; i++ )); do
     INSYNC_USERNAME=INSYNC_${i}_USERNAME
     INSYNC_DISABLE_SYNC=INSYNC_${i}_DISABLE_SYNC
     INSYNC_ENABLE_SYNC=INSYNC_${i}_ENABLE_SYNC
 
-    echo 'Set selective sync for '${!INSYNC_USERNAME}
+    echo "[INSYNC] Set selective sync for ${!INSYNC_USERNAME}"
 
     # Disable folders
-    for folder_id in $(echo ${!INSYNC_DISABLE_SYNC} | sed "s/,/ /g")
+    for GFOLDER_ID in $(echo ${!INSYNC_DISABLE_SYNC} | sed "s/,/ /g")
     do
-        echo "Disable $folder_id"
-        insync set_selective_sync ${!INSYNC_USERNAME} ${folder_id} no
+        echo "[INSYNC] Disable $GFOLDER_ID"
+        insync set_selective_sync ${!INSYNC_USERNAME} ${GFOLDER_ID} no
     done
 
     # Enable folders
-    for folder_id in $(echo ${!INSYNC_ENABLE_SYNC} | sed "s/,/ /g")
+    for GFOLDER_ID in $(echo ${!INSYNC_ENABLE_SYNC} | sed "s/,/ /g")
     do
-        echo "Enable $folder_id"
-        insync set_selective_sync ${!INSYNC_USERNAME} ${folder_id} yes
+        echo "[INSYNC] Enable $GFOLDER_ID"
+        insync set_selective_sync ${!INSYNC_USERNAME} ${GFOLDER_ID} yes
     done
 done
 
-echo 'Sleeping 5 seconds.'
-sleep 5s
-
+echo "[INSYNC] Enable autostart"
 insync set_autostart yes
-insync quit 
+insync quit > /dev/null

@@ -6,7 +6,7 @@ ENV S6_VERSION "v1.22.1.0"
 ENV S6_ARCH "amd64"
 
 RUN apt-get update \
-    && apt-get install -y curl gnupg sudo tzdata
+    && apt-get install -y curl gnupg sudo tzdata sqlite3
 
 RUN curl -L -s https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.gz | tar xvzf - -C /
 
