@@ -10,14 +10,10 @@ RUN apt-get update \
 
 RUN curl -L -s https://github.com/just-containers/s6-overlay/releases/download/${S6_VERSION}/s6-overlay-${S6_ARCH}.tar.gz | tar xvzf - -C /
 
-RUN \
-    # Install Insync
-    apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ACCAF35C \
+RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ACCAF35C \
     && echo "deb http://apt.insynchq.com/ubuntu bionic non-free contrib" >> /etc/apt/sources.list.d/insync.list \
     && apt-get update \
     && apt-get install -y insync-headless \
-
-    # Cleanup
     && apt-get autoremove --purge \
     && apt-get clean \
     && rm -rf /root/.config/Insync \
