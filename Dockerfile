@@ -18,7 +18,7 @@ RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys ACCAF35C \
     && apt-get autoremove -y --purge \
     && apt-get clean \
     && rm /insync-headless.deb \
-    && /root/.config/Insync \
+    && rm -rf /root/.config/Insync \
     && rm -rf /var/lib/apt/lists/* \
     && rm -rf /tmp/*
 
