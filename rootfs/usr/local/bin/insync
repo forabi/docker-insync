@@ -1,4 +1,0 @@
-#!/usr/bin/with-contenv bash
-
-args="$@"
-sudo -u abc bash -c "/usr/bin/insync-headless $args"

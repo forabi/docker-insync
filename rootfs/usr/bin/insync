@@ -1,0 +1,4 @@
+#!/command/with-contenv /usr/bin/bash
+
+args="$@"
+sudo -u abc bash -c "/usr/bin/insync $args"

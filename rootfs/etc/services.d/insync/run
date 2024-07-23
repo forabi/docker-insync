@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+#!/command/with-contenv /bin/sh
 
 echo '[INSYNC] Starting Insync.'
 insync start --no-daemon

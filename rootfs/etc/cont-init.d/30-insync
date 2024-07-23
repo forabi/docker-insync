@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv bash
+!/command/with-contenv /bin/bash
 
 INSYNC_1_DOWNLOAD=${INSYNC_1_DOWNLOAD:-"ms-office"}
 INSYNC_2_DOWNLOAD=${INSYNC_2_DOWNLOAD:-"ms-office"}
@@ -41,11 +41,29 @@ done
 echo '[INSYNC] Start Insync.'
 insync start > /dev/null
 
-while insync get_status | grep "Insync doesn't seem to be running." > dev/null
+while insync status | grep "Insync doesn't seem to be running." > /dev/null
 do
     echo '[INSYNC] Waiting for Insync to start.'
     sleep 2s
 done
+
+
+get_friendly_name() {
+  case $1 in
+    gd)
+      echo "GoogleDrive"
+      ;;
+    od)
+      echo "OneDrive"
+      ;;
+    dx)
+      echo "Dropbox"
+      ;;
+    *)
+      echo "UnknownCloud"
+      ;;
+  esac
+}
 
 # Add accounts if they don't exist.
 NUM=`printenv | sort | grep '\INSYNC_.*_USERNAME' | wc -l`
@@ -54,6 +72,9 @@ for (( i = 1; i <= $NUM; i++ )); do
     INSYNC_USERNAME=INSYNC_${i}_USERNAME
     INSYNC_DOWNLOAD=INSYNC_${i}_DOWNLOAD
     INSYNC_AUTH_CODE=INSYNC_${i}_AUTH_CODE
+    INSYNC_CLOUD=INSYNC_${i}_CLOUD
+    CLOUD_FRIENDLY_NAME=$(get_friendly_name ${!INSYNC_CLOUD})
+
 
     if [ "${ACCOUNTS_TO_ADD[${!INSYNC_USERNAME}]}" == "true" ]; then
         if [ -z "${!INSYNC_AUTH_CODE}" ]; then
@@ -64,9 +85,9 @@ for (( i = 1; i <= $NUM; i++ )); do
 
         sudo -u abc mkdir -p /data/${!INSYNC_USERNAME}
         echo "[INSYNC] Adding account ${!INSYNC_USERNAME}"
-        RESULT=$(sudo -u abc bash -c "exec echo yes | /usr/bin/insync-headless add_account -a ${!INSYNC_AUTH_CODE} -p /data/${!INSYNC_USERNAME} -e ${!INSYNC_DOWNLOAD}")
+        RESULT=$(sudo -u abc bash -c "exec echo yes | /usr/bin/insync-headless account add -a ${!INSYNC_AUTH_CODE} -c ${!INSYNC_CLOUD} -p "/data/${!INSYNC_USERNAME}/${CLOUD_FRIENDLY_NAME}" -e ${!INSYNC_DOWNLOAD}")
 
-        if echo $RESULT | grep 'error' > dev/null; then
+        if echo $RESULT | grep 'error' > /dev/null; then
             echo "[ERROR] Fails to add account for ${!INSYNC_USERNAME}"
         fi
     else
@@ -75,7 +96,7 @@ for (( i = 1; i <= $NUM; i++ )); do
 done
 
 # Wait until at least one account start syncing
-while insync get_status | grep 'UNLINKED' > dev/null
+while insync status | grep 'UNLINKED' > /dev/null
 do
     echo '[INSYNC] Waiting for Insync to initialize.'
     sleep 2s
@@ -86,6 +107,7 @@ sleep 2s
 NUM=`printenv | sort | grep '\INSYNC_.*_USERNAME' | wc -l`
 for (( i = 1; i <= $NUM; i++ )); do
     INSYNC_USERNAME=INSYNC_${i}_USERNAME
+    INSYNC_CLOUD=INSYNC_${i}_CLOUD
     INSYNC_DISABLE_SYNC=INSYNC_${i}_DISABLE_SYNC
     INSYNC_ENABLE_SYNC=INSYNC_${i}_ENABLE_SYNC
 
@@ -95,17 +117,15 @@ for (( i = 1; i <= $NUM; i++ )); do
     for GFOLDER_ID in $(echo ${!INSYNC_DISABLE_SYNC} | sed "s/,/ /g")
     do
         echo "[INSYNC] Disable $GFOLDER_ID"
-        insync set_selective_sync ${!INSYNC_USERNAME} ${GFOLDER_ID} no
+        insync selective-sync -a ${!INSYNC_USERNAME} -c ${!INSYNC_CLOUD} ${GFOLDER_ID} no
     done
 
     # Enable folders
     for GFOLDER_ID in $(echo ${!INSYNC_ENABLE_SYNC} | sed "s/,/ /g")
     do
         echo "[INSYNC] Enable $GFOLDER_ID"
-        insync set_selective_sync ${!INSYNC_USERNAME} ${GFOLDER_ID} yes
+        insync selective-sync -a ${!INSYNC_USERNAME} -c ${!INSYNC_CLOUD} ${GFOLDER_ID} yes
     done
 done
 
-echo "[INSYNC] Enable autostart"
-insync set_autostart yes
 insync quit > /dev/null

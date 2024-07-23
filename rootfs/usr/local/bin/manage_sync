@@ -1,4 +1,0 @@
-#!/usr/bin/with-contenv bash
-
-args="$@"
-sudo -u abc bash -c "TERM=xterm  /usr/bin/insync-headless manage_selective_sync $args"

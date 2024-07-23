@@ -1,4 +1,4 @@
-#!/usr/bin/with-contenv sh
+#!/command/with-contenv /bin/sh
 
 if [ $TIMEZONE ]; then
     [ -f /usr/share/zoneinfo/$TIMEZONE ] && cp /usr/share/zoneinfo/$TIMEZONE /etc/localtime || echo "WARNING: $TIMEZONE is not a valid time zone."
